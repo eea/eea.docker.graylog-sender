@@ -50,14 +50,31 @@ if [[ "$@" == "run" ]]; then
 
 
 	environment_name=$(curl -s http://rancher-metadata/latest/self/stack/environment_name)
-        environment_uuid=$(curl -s http://rancher-metadata/latest/self/stack/environment_uuid)
+	try=0
+	while [ -z "$environment_name" ]; do
+		if [ $try -lt 4 ]; then
+			sleep 10
+			environment_name=$(curl -s http://rancher-metadata/latest/self/stack/environment_name)
+		else
+			environment_name="$(hostname)"
+		fi
 
-	if [ -z "$environment_name" ]; then
-		environment_name="$(hostname)"
-	fi
-	if [ -z "$environment_uuid" ]; then
-		environment_uuid="not-rancher"
-	fi
+		try=$(( $try + 1 ))  
+	done
+
+	environment_uuid=$(curl -s http://rancher-metadata/latest/self/stack/environment_uuid)
+	try=0
+	while [ -z "$environment_uuid" ]; do
+		if [ $try -lt 4 ]; then
+			sleep 10
+			environment_uuid=$(curl -s http://rancher-metadata/latest/self/stack/environment_uuid)
+		else
+			environment_uuid="not-rancher"
+		fi
+
+		try=$(( $try + 1 ))
+
+	done
 
 	declare -a intype protocol host port 
 
@@ -79,9 +96,9 @@ if [[ "$@" == "run" ]]; then
 		do
 
 			if [[ "${intype[i],,}" == "gelf" ]]; then
-				message="{\"message\": \"Graylog input consistency check from $environment_name for ${intype[i]}, ${protocol[i]} on port ${port[i]}\", \"source\":\"$(hostname)\", \"environment_name\": \"$environment_name\", \"facility\": \"user-level\", \"level\": 6, \"process_id\": \"${intype[i]}_${protocol[i]}_${port[i]}\", \"application_name\": \"$environment_uuid\"}\0"
+				message="{\"message\": \"Graylog input consistency check from $environment_name for ${intype[i]}, ${protocol[i]} on port ${port[i]}\", \"source\":\"graylog-sender\", \"environment_name\": \"$environment_name\", \"facility\": \"user-level\", \"level\": 6, \"process_id\": \"${intype[i]}_${protocol[i]}_${port[i]}\", \"application_name\": \"$environment_uuid\"}\0"
 			else
-				message="<14>1 $(date --iso-8601=seconds -u) $(hostname) $environment_uuid ${intype[i]}_${protocol[i]}_${port[i]} Graylog input consistency check from $environment_name for ${intype[i]}, ${protocol[i]} on port ${port[i]}" 
+				message="<14>1 $(date --iso-8601=seconds -u) graylog-sender $environment_uuid ${intype[i]}_${protocol[i]}_${port[i]} Graylog input consistency check from $environment_name for ${intype[i]}, ${protocol[i]} on port ${port[i]}" 
 			fi
 
 			#echo "Params are ${intype[i]} ${protocol[i]} ${host[i]} ${port[i]} message=$message"

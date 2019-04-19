@@ -92,6 +92,9 @@ if [[ "$@" == "run" ]]; then
 	while true
 	do
 
+
+		target_epoch=$(( $(date +%s) + $GRAYLOG_TIMEOUT_S ))
+
 		for (( i=0; i<${#intype[@]}; i++))
 		do
 
@@ -104,11 +107,9 @@ if [[ "$@" == "run" ]]; then
 			#echo "Params are ${intype[i]} ${protocol[i]} ${host[i]} ${port[i]} message=$message"
 
 			send_log ${protocol[i]} ${host[i]} ${port[i]} $message
-
 		done
 
-		sleep $GRAYLOG_TIMEOUT_S
-
+		sleep $(( $target_epoch - $(date +%s) ))
 	done
 
 else
